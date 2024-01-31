@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SimpleToDoList.Application.Models;
+using SimpleToDoList.Application.Repository;
 
 
 
@@ -10,7 +12,7 @@ public class ToDo : IToDo
     private static long CurrentId = 0;
     private long Id { set; get; }
     public string Name { set; get; }
-    private List<Task> Tasks;
+    private TaskRepository _taskRepository;
 
 
 
@@ -23,32 +25,27 @@ public class ToDo : IToDo
 
         try
         {
-            List<Task> backUp = loadFromFiles();
-            if (backUp != null)
-            {
-                Tasks = new List<Task>(backUp);
-            }
-
+            _taskRepository = new TaskRepository();
         }
         catch (Exception ex)
         {
             Console.WriteLine("---> Error in Loading Data <---\n");
-            Tasks = new List<Task>();
         }
     }
 
 
     public void AddTask(Task task)
     {
-        Tasks.Add(task);
+        _taskRepository.Add(task);
         Console.WriteLine("---> Task created! <---\n");
     }
 
-    public void RemoveTaskByIndex(int index)
+
+    public void RemoveByIndex(int index)
     {
-        if (index >= 0 && index < Tasks.Count)
+        if (index >= 0 && index < _taskRepository.GetAll().Count())
         {
-            Tasks.RemoveAt(index);
+            _taskRepository.Remove(index);
             Console.WriteLine("---> Task removed! <---\n");
         }
         else { Console.WriteLine("---> index is invalid! <---\n"); }
@@ -60,14 +57,14 @@ public class ToDo : IToDo
         else
         {
             int i = 0;
-            foreach (Task task in Tasks)
+            var tasks = _taskRepository.GetAll();
+            foreach (Task task in tasks)
             {
                 if (task.Title.Equals(Name))
                 {
-                    Tasks.RemoveAt(i);
+                    _taskRepository.Remove(i);
                     Console.WriteLine($"---> Task{task.Title} removed successfully! <---\n");
                     break;
-
                 }
                 i++;
             }
@@ -77,13 +74,15 @@ public class ToDo : IToDo
 
     public void ViewTasks()
     {
-        if (Tasks.Count > 0)
+        var tasks = _taskRepository.GetAll();
+
+        if (tasks.Count > 0)
         {
             Console.WriteLine("---> Here are your tasks: <---\n");
-            for (int i = 0; i < Tasks.Count; i++)
+            for (int i = 0; i < tasks.Count; i++)
             {
                 Console.WriteLine($"Task {i + 1}:");
-                Console.WriteLine(Tasks[i]);
+                Console.WriteLine(tasks[i]);
             }
         }
         else
@@ -92,56 +91,24 @@ public class ToDo : IToDo
         }
     }
 
-    // edit task
+    public void MarkAsDone(int index) {
 
-    private List<Task> loadFromFiles()
-    {
-
-        string path = "../../../Infrastructure/Data.txt";
-
-        try
+        if (index >= 0 && index < _taskRepository.GetAll().Count())
         {
-
-            // Read the JSON string from the filetry
-            string jsonString = File.ReadAllText(path);
-
-            if (string.IsNullOrEmpty(jsonString))
+            var task =_taskRepository.Get(index);
+            if (task.DeadlineDate < DateTime.Now)
             {
-                // Return a default or null ToDo object
-                return null;
+                Console.WriteLine("---> outDated! <---\n");
+                return;
             }
-            else
-            {
-                // Deserialize the JSON string into an Item object
-                List<Task> item = JsonConvert.DeserializeObject<List<Task>>(jsonString);
-                return item;
-            }
-
+            task.IsCompleted = true;
+            task.DoneDate= DateTime.Now;
+            Console.WriteLine("---> Task is done! <---\n");
         }
-        catch (Exception ex)
-        {
-            throw new Exception("Error in loading File");
-
-        }
-
+        else { Console.WriteLine("---> index is invalid! <---\n"); }
     }
 
-    public void saveToFile()
-    {
 
-        try
-        {
-            string jsonString = JsonConvert.SerializeObject(Tasks);
-            string path = "../../../Infrastructure";
-            // Write the JSON string to a file
-            File.WriteAllText(Path.Combine(path, "data.txt"), jsonString);
-
-        }catch (Exception ex)
-        {
-            Console.WriteLine("---> Error in Saving Data <---");
-        }
-
-    }
 
 
     public void PrintOptions()
@@ -150,9 +117,11 @@ public class ToDo : IToDo
         string optionsMenu = "///// options \\\\\\\\\\" + "\n\n" +
             "1 . Add a new task \n" +
             "2 . Delete a task \n" +
-            "3 . All tasks \n" +
-            "4 . prior tasks \n" +
-            "5 . Exit \n\n" +
+            "3 . Mark as done \n" +
+            "4 . All tasks \n" +
+            "5 . prior tasks \n" +
+            "6 . overal informations \n" +
+            "7 . Exit \n\n" +
             "///// options \\\\\\\\\\ \n";
         Console.WriteLine(optionsMenu);
 
@@ -160,18 +129,78 @@ public class ToDo : IToDo
 
     public Task? GetNearestTask()
     {
-        var validTasks = Tasks.Where(t => t.DeadlineDate >= DateTime.Now);
+        var tasks = _taskRepository.GetAll();
+        var validTasks = tasks.Where(t => t.DeadlineDate >= DateTime.Now);
         var minDate = validTasks.Min(t => t.DeadlineDate);
         var nearestTasks = validTasks.Where(t => t.DeadlineDate == minDate);
         var finalTask = nearestTasks.OrderByDescending(t => t.Priority);
         return finalTask.ToList().FirstOrDefault();
     }
 
-    public void UpdateTask(Task task)
+    
+
+    internal void PrintStatisticsOptions()
     {
-        throw new NotImplementedException();
+        Console.WriteLine("Please choose an option with its number \n");
+        string optionsMenu = "///// statistic options \\\\\\\\\\" + "\n\n" +
+            "1 . Overall Counts \n" +
+            "2 . In desired interval tasks count \n" +
+            "3 . Last 3 done and created task in today\n" +
+            "4 . Not done tasks with 5 days past the createion \n" +
+            "5 . Return \n\n" +
+            "///// statistic options \\\\\\\\\\ \n";
+        Console.WriteLine(optionsMenu);
     }
 
+    public void OverallCounts()
+    {
+        string output = "";
+        output += $"all tasks count : {_taskRepository.GetAll().Count()} \n";
+        output += $"done tasks count : {_taskRepository.GetAll().Count(task => task.IsCompleted)}\n";
+        output += $"done tasks count : {_taskRepository.GetAll().Count(task => !task.IsCompleted)}\n";
+        output += $"expired tasks count : {_taskRepository.GetAll().Count(task => task.DeadlineDate < DateTime.Now && !task.IsCompleted)}\n";
+        output += $"not done task count based on priority :\n";
+        var aggregateResault = _taskRepository.GetAll().Where(t => !t.IsCompleted)
+                     .GroupBy(t => t.Priority)
+                     .Select(g => new
+                     {
+                         Type = g.Key,
+                         Count = g.Count()
+                     })
+                     .OrderBy(g => g.Type)
+                     .ToList();
+        foreach (var item in aggregateResault)
+        {
+            output += $"{item.Type} : {item.Count}\n";
+        }
+        Console.WriteLine(output);
+        
+    }
+
+    public void SaveToFile()
+    {
+        _taskRepository.saveToFile();
+    }
+
+    public int DesiredIntervalTasks(DateTime startDate, DateTime endDate)
+    {
+        return _taskRepository.GetAll().Count(task => task.DoneDate <= endDate && task.DoneDate >= startDate);
+    }
+
+    internal List<Task> Last3TasksCreatedAndDoneToday()
+    {
+        return _taskRepository.GetAll().Where(task => 
+        task.CreateDate.Date == DateTime.Today && 
+        task.DoneDate == DateTime.Today)
+            .TakeLast(3).ToList();
+    }
+
+    internal List<Task> NotDoneTasksWith5DaysPast()
+    {
+        return _taskRepository.GetAll().Where(task => 
+        (DateTime.Now - task.CreateDate).TotalDays > 5)
+            .OrderByDescending(task => task.CreateDate)
+            .Take(3)
+            .ToList();
+    }
 }
-
-

@@ -11,6 +11,9 @@
     public DateTime? DeadlineDate { get; set; }
     public Priority Priority { get; set; }
 
+    public bool IsCompleted { get; set; }
+    public DateTime DoneDate { get; set; }
+
 
     public Task(string title, string description, DateTime deadlineDate, Priority priority = Priority.Low)
     {
@@ -28,6 +31,15 @@
         this.CreateDate = DateTime.Now;
         this.UpdateDate = DateTime.Now;
         this.DeadlineDate = deadlineDate;
+    }
+
+    public bool MarkAsDone()
+    {
+        if (IsCompleted) return true;
+        if (DateTime.Now < this.DeadlineDate) return false;
+        this.IsCompleted = true;
+        this.DoneDate = DateTime.Now;
+        return true;
     }
 
 

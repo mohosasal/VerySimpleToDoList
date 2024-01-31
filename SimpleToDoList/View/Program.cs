@@ -1,4 +1,6 @@
-﻿using System;
+﻿using SimpleToDoList.Application.Models;
+using System;
+using System.Globalization;
 using System.Xml.Linq;
 
 
@@ -58,18 +60,26 @@ class Program
                         // Remove an existing task
                         Console.WriteLine("---> Enter the index of the task you want to remove: <---");
                         int index = int.Parse(Console.ReadLine()) - 1;
-                        todo.RemoveTaskByIndex(index);
+                        todo.RemoveByIndex(index);
 
                         break;
 
                     case 3:
+
+                        // Remove an existing task
+                        Console.WriteLine("---> Enter the index of the task you want to mark as done: <---");
+                        int indexx = int.Parse(Console.ReadLine()) - 1;
+                        todo.MarkAsDone(indexx);
+                        break;
+
+                    case 4:
 
                         // View all tasks
                         todo.ViewTasks();
 
                         break;
 
-                    case 4:
+                    case 5:
 
                         // get the nearest duotime tasks
                         Task priorTask = todo.GetNearestTask();
@@ -78,10 +88,18 @@ class Program
 
                         break;
 
-                    case 5:
+
+                    case 6:
+
+                        // get Informations
+                        StatisticsMenu(todo);
+
+                        break;
+
+                    case 7:
 
                         // Exit the program
-                        todo.saveToFile();
+                        todo.SaveToFile();
                         Console.WriteLine(" ---> Thanks! <---");
                         Console.WriteLine(" ---> Saving Files! <---");
                         return;
@@ -106,6 +124,84 @@ class Program
 
     }
 
+
+    static void StatisticsMenu(ToDo todo)
+    {
+        int input;
+
+        Console.WriteLine("---> Statistics! <---\n");
+
+        while (true)
+        {
+
+            todo.PrintStatisticsOptions();
+            input = int.Parse(Console.ReadLine());
+            Console.WriteLine("\n");
+
+            try
+            {
+
+
+
+                switch (input)
+                {
+                    case 1:
+                        //Overall informations
+                        todo.OverallCounts();
+                        break;
+
+                    case 2:
+                        //Overall informations
+                        Console.WriteLine("---> Enter the \"from\" date (MM/DD/YYYY): <---");
+                        DateTime startDate = DateTime.Parse(Console.ReadLine());
+                        Console.WriteLine("---> Enter the \"to\" date (MM/DD/YYYY): <---");
+                        DateTime endDate = DateTime.Parse(Console.ReadLine());
+                        var taskCount = todo.DesiredIntervalTasks(startDate, endDate);
+                        Console.WriteLine(taskCount); 
+
+                        break;
+
+                    case 3:
+
+                        List<Task> tasksToday = todo.Last3TasksCreatedAndDoneToday();
+                        foreach (Task i in tasksToday)
+                        {
+                            Console.WriteLine(i);
+                        }
+                        break;
+
+                    case 4:
+
+                        List<Task> notDoneTasks = todo.NotDoneTasksWith5DaysPast();
+                        foreach (Task i in notDoneTasks)
+                        {
+                            Console.WriteLine(i);
+                        }
+                        break;
+
+
+                    case 5:
+                        return;
+
+                    default:
+
+                        // Invalid choice
+                        Console.WriteLine("---> Invalid option. Please try again. <---");
+
+                        break;
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("---> Be carefull about the command foramts! <---");
+            }
+
+
+            Console.WriteLine("\n");
+
+        }
+    }
 }
 
 
