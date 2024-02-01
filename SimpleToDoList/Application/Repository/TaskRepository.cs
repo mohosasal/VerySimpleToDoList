@@ -1,21 +1,25 @@
 ﻿using Newtonsoft.Json;
+using SimpleToDoList.Application.Models.Heap;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace SimpleToDoList.Application.Repository
 {
     internal class TaskRepository
     {
         private List<Task> _tasks;
+      
 
         public TaskRepository() { 
 
             // prepair the info from the file
             this.loadFromFiles();
-        
+           
+
 
         }
 

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SimpleToDoList.Application.Models;
 using SimpleToDoList.Application.Repository;
-
+using SimpleToDoList.Application.Models.Heap;
 
 
 public class ToDo : IToDo
@@ -160,15 +160,16 @@ public class ToDo : IToDo
         output += $"done tasks count : {_taskRepository.GetAll().Count(task => !task.IsCompleted)}\n";
         output += $"expired tasks count : {_taskRepository.GetAll().Count(task => task.DeadlineDate < DateTime.Now && !task.IsCompleted)}\n";
         output += $"not done task count based on priority :\n";
-        var aggregateResault = _taskRepository.GetAll().Where(t => !t.IsCompleted)
-                     .GroupBy(t => t.Priority)
-                     .Select(g => new
-                     {
-                         Type = g.Key,
-                         Count = g.Count()
-                     })
-                     .OrderBy(g => g.Type)
-                     .ToList();
+        var aggregateResault = _taskRepository.GetAll()
+            .Where(t => !t.IsCompleted)
+            .GroupBy(t => t.Priority)
+            .Select(g => new
+            {
+               Type = g.Key,
+               Count = g.Count()
+            })
+            .OrderBy(g => g.Type)
+            .ToList();
         foreach (var item in aggregateResault)
         {
             output += $"{item.Type} : {item.Count}\n";
@@ -202,5 +203,29 @@ public class ToDo : IToDo
             .OrderByDescending(task => task.CreateDate)
             .Take(3)
             .ToList();
+    }
+
+    internal Task GetTheMostPriorTaskByHeap()
+    {
+        var comparer = Comparer<Task>.Create((x, y) => y.DeadlineDate.Value.CompareTo(x.DeadlineDate.Value));
+       
+        var heap = _taskRepository.GetAll().ToHeap(comparer);
+
+        Task item;
+        
+
+        while(heap.Count > 0)
+        {
+            item = heap.Remove();
+            if (item.DeadlineDate > DateTime.Now)
+            {
+                return item;
+            }
+
+        }
+        return null;
+
+
+
     }
 }
